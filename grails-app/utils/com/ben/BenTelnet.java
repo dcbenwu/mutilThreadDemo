@@ -27,6 +27,13 @@ public class BenTelnet {
 
     Logger log = LoggerFactory.getLogger(this.getClass().getName());
 
+
+    public void free() {
+        telnet = null;
+        in = null;
+        out = null;
+    }
+
     /**
      * 登录linux
      * @param server
