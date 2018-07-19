@@ -235,7 +235,7 @@ class ScanService {
         log.info("release Semaphore")
         telnetLimits.release(permits)
         scanEndTime = new Date()
-        log.info("Begin at " + begin + " \nEnd   at " + new Date())
+        log.info("Task start at " + begin + " Semaphore released   at " + new Date())
     }
 
     private class TelnetTaskInner implements Runnable{

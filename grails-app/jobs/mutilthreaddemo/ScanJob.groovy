@@ -9,6 +9,7 @@ class ScanJob {
 
     def execute() {
         // execute job
+        log.info("Scan job started at " + new Date())
         scanService.go()
         //scanService.testDb()
         /*new BooksEqpt(sn: "test", pn: "test", type: "test", location: "test",
