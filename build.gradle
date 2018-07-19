@@ -41,7 +41,7 @@ dependencies {
     // add telnet jar
     compile 'commons-net:commons-net:3.4'
     // add cron job (task)
-    compile 'org.grails.plugins:quartz:2.0.12'
+    compile 'org.grails.plugins:quartz:2.0.13'
 
     console "org.grails:grails-console"
     profile "org.grails.profiles:web"
