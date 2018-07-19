@@ -293,9 +293,7 @@ class ScanService {
         }
 
         private String retrieveInventory() {
-
-            String reStr;
-
+            def reStr = null;
             telnetLimit.acquire()
             startTimeMills = System.currentTimeMillis()
 
@@ -303,30 +301,36 @@ class ScanService {
                 log.info("try to connect ip " + ip)
                 benTelnet = new BenTelnet(ip, ds_port, timeout);
 
-                log.info("try to send command to ip " + ip)
-                reStr = benTelnet.sendCommand("act-user::Admin1:123::*;", ';');
-                log.info(reStr.replaceFirst("act-user::Admin1:123::*;", ""));
-                Thread.sleep(100);
-                log.info("try to send second command to ip " + ip)
-                reStr = benTelnet.sendCommand("act-user::Admin1:123::1Transport!;", ';');
-                log.info("get login resp on ip " + ip + " Message: " + reStr)
-                Thread.sleep(100);
-                //log.info(reStr.replaceFirst("act-user::Admin1:123::1Transport!;", ""));
-                log.info("try to send third command to ip " + ip)
-                reStr = benTelnet.sendCommand("rtrv-inv::all:100:::;", ';');
-                //reStr = benTelnet.sendCommand_4_rtrv("rtrv-inv::all:100:::;", ';', 8000);
-                log.info(reStr.replaceFirst("rtrv-inv::all:100:::;", ""));
-                benTelnet.disconnect();
+                log.info("try to login ip " + ip)
+                def loginStr = benTelnet.sendCommand("act-user::Admin1:123::1Transport!;", ';');
+                //log.info(loginStr.replaceFirst("act-user::Admin1:123::1Transport!;", ""));
+                if ( loginStr != null && loginStr.contains("M  123 COMPLD")) {
+                    Thread.sleep(50);
+                    def inhStr = benTelnet.sendCommand("INH-MSG-ALL:::234;", ';')
+                    if (inhStr != null && inhStr.contains( "M  234 COMPLD")) {
+                        log.info("try to retrieve inventory from ip " + ip)
+                        Thread.sleep(50);
+                        reStr = benTelnet.sendCommand("rtrv-inv::all:456:::;", ';');
 
+                        log.info(reStr.replaceFirst("rtrv-inv::all:456:::;", ""));
+                    } else {
+                        log.warn(" INH-MSG-ALL command failed with resp " + inhStr)
+                    }
+                } else {
+                    log.warn("telnet login failed with message: " + loginStr)
+                }
+                benTelnet.disconnect();
                 log.info("end of talking to device " + ip);
             } catch (SocketException se) {
                 log.info("Telnet Client initialing failed on ip " + ip)
                 log.info("SocketException Message: " + se.getMessage())
                 //se.printStackTrace()
+                benTelnet.free()
             } catch (Exception e) {
-                log.info("Telnet Client initialing failed on ip " + ip)
+                log.info("Telnet Client send command failed on ip " + ip)
                 log.info("Other Exception Message: " + e.getMessage())
                 //e.printStackTrace()
+                benTelnet.free()
             }
 
             telnetLimit.release()
