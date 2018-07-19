@@ -151,12 +151,14 @@ class ScanService {
             while (true) {
                 Thread.sleep(10)
                 if (futureMap.size() == 0) {
+                    log.info("All scan threads are terminated. End record the timestamp.")
                     BooksScanTime.withNewSession {
                         def now = new Date()
                         def dateString = now.format("yyyy-MM-dd")
                         def curDate = Date.parse("yyyy-MM-dd", dateString)
                         new BooksScanTime(scanStartTime: scanStartTime, scanEndTime: new Date(), curDate: curDate).save()
                     }
+                    log.info("---End of scan process.")
                     break
                 }
             }
