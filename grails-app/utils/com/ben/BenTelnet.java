@@ -29,6 +29,7 @@ public class BenTelnet {
 
 
     public void free() {
+        log.info("release Telnet object");
         telnet = null;
         in = null;
         out = null;
@@ -42,6 +43,7 @@ public class BenTelnet {
      */
     public BenTelnet(String server, int port, int timeout) throws Exception{
 
+        log.info(" try to initialize telnet client " + server );
         // Connect to the specified server
         telnet = new TelnetClient();
         TerminalTypeOptionHandler ttopt = new TerminalTypeOptionHandler(
@@ -64,12 +66,14 @@ public class BenTelnet {
             long end = System.currentTimeMillis();
             //System.out.println("SocketTimeoutException estimate " + (end-begin) + " ms");
             //ex.printStackTrace();
+            log.warn("init telnet client failed. " +ex.getMessage());
             throw ex;
         } catch (ConnectException ex) {
             long end = System.currentTimeMillis();
             //System.out.println("ConnectException estimate " + (end-begin) + " ms");
             //ex.printStackTrace();
             System.err.println("ConnectException on ip " + server + " " + ex.getMessage() );
+            log.warn("init telnet client failed. " + ex.getMessage());
             throw ex;
         }
 
@@ -81,6 +85,7 @@ public class BenTelnet {
         // Advance to a prompt
         System.out.println("try to Advance to a prompt on ip " + server);
         String retStr = readUntil('>' + " ");
+        log.info("Telnet Client " + server + " initialized." );
 
     }
 

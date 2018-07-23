@@ -110,21 +110,24 @@ class ScanService {
         def ip
         def subNetList = [96, 97, 99, 151, 153, 155, 157, 100, 201, 202, 178]
         //def subNetList = [160]//[96, 97, 99, 151, 153, 155, 160, 157, 100, 201, 202]
-        (2..254).each { net4 ->
-            subNetList.each { net3 ->
+
+        subNetList.each { net3 ->
+            (2..254).each { net4 ->
                 ip = "172.29."+net3+"."+net4
                 ipArr.add(ip)
                 //ipArr.push(ip)
             }
         }
-        (101..254).each { net4 ->
-            (160).each { net3 ->
+
+        (160).each { net3 ->
+            (101..254).each { net4 ->
                 ip = "172.29."+net3+"."+net4
                 ipArr.add(ip)
             }
         }
-        (2..254).each { net4 ->
-            (130).each { net3 ->
+
+        (130).each { net3 ->
+            (2..254).each { net4 ->
                 ip = "172.23."+net3+"."+net4
                 ipArr.add(ip)
             }
@@ -138,7 +141,7 @@ class ScanService {
         Semaphore telnetLimits = new Semaphore(permits)
         int ii = 0
         ipArr.each {
-            log.info("Summit task " + (++ii))
+            log.info("Summit task " + (++ii) + " for ip " + it)
             TelnetTaskInner oneScanTask = new TelnetTaskInner(it, telnetLimits, searchDate)
             Future future = executorService.submit(oneScanTask)
             futureMap[it] = future
@@ -248,6 +251,10 @@ class ScanService {
         static final int timeout = 3*1000;
         private Date searchDate;
 
+        private final String rtrvTag = "tag456";
+        private final String rtrvTagVerify = "M  " + rtrvTag + " COMPLD";
+        private final String retrieveInventoryCmd = "rtrv-inv::all:" + rtrvTag + ":::;";
+
 
         Semaphore telnetLimit
 
@@ -259,6 +266,7 @@ class ScanService {
             this.ip = ip
             this.telnetLimit = telnetLimit
             this.searchDate = searchDate
+            log.info("TelnetTask created on ip " + ip)
         }
 
         public void testSql() {
@@ -269,11 +277,11 @@ class ScanService {
 
         @Override
         public void run() {
-
+            log.info("Telnet Thread for " + ip + " is triggered.")
             String invStr = retrieveInventory()
 
-            if (invStr != null && invStr.contains("M  100 COMPLD")) {
-                log.info("got M  100 COMPLD on " + ip)
+            if (invStr != null && invStr.contains(rtrvTagVerify)) {
+                log.info("got rtrv inv resp on " + ip)
                 if (invStr.contains("REPT EVT SESSION")){
                     abnormalIP("EVT")
                 } else if (invStr.contains("REPT DBCHG")) {
@@ -286,18 +294,23 @@ class ScanService {
                 //log.info("Debug: invStr = " + invStr)
                 matchDeviceInfo(invStr)
             } else {
-                log.info("Warning: not got correct resp on " + ip + " Message: " + invStr)
+                log.error("Warning: retrieveInventory " + ip + ". Content: " + invStr)
             }
 
             //telnetLimit.release()
         }
 
         private String retrieveInventory() {
-            def reStr = null;
-            telnetLimit.acquire()
-            startTimeMills = System.currentTimeMillis()
-
+            String reStr;
             try {
+                log.info("try to retrieveInventory on ip " + ip)
+
+                def semaphoreBegin = System.currentTimeMillis()
+                telnetLimit.acquire()
+
+                def semaphoreEnd = System.currentTimeMillis()
+                log.info("Acquire semaphore for " + ip + " takes " + (semaphoreEnd - semaphoreBegin) + " ms")
+                startTimeMills = System.currentTimeMillis()
                 log.info("try to connect ip " + ip)
                 benTelnet = new BenTelnet(ip, ds_port, timeout);
 
@@ -310,9 +323,9 @@ class ScanService {
                     if (inhStr != null && inhStr.contains( "M  234 COMPLD")) {
                         log.info("try to retrieve inventory from ip " + ip)
                         Thread.sleep(50);
-                        reStr = benTelnet.sendCommand("rtrv-inv::all:456:::;", ';');
+                        reStr = benTelnet.sendCommand(retrieveInventoryCmd, ';');
 
-                        log.info(reStr.replaceFirst("rtrv-inv::all:456:::;", ""));
+                        log.info("retrieve inventory from ip " + ip + " : " + reStr);
                     } else {
                         log.warn(" INH-MSG-ALL command failed with resp " + inhStr)
                     }
@@ -331,9 +344,10 @@ class ScanService {
                 log.info("Other Exception Message: " + e.getMessage())
                 //e.printStackTrace()
                 benTelnet.free()
+            } finally {
+                log.info(" release semaphore for ip " + ip)
+                telnetLimit.release()
             }
-
-            telnetLimit.release()
 
             return reStr
         }
